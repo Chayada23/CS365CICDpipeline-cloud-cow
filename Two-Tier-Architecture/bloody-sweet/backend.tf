@@ -3,7 +3,7 @@ terraform {
     bucket         = "my-aws-bucket-two-tier-app"
     region         = "us-east-1"
     key            = "Non-Modularized/Two-Tier-Architecture/terraform.tfstate"
-    dynamodb_table = "Lock-Files"
+    use_lockfile = true
     encrypt        = true
   }
   required_version = ">=0.13.0"
