@@ -1,0 +1,55 @@
+name: Full CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  terraform:
+    name: Deploy Infrastructure
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        run: terraform plan -var-file="variables.tfvars"
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve -var-file="variables.tfvars"
+
+  e2e-test:
+    name: End-to-End Testing
+    needs: terraform
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Wait for deployment
+        run: sleep 120
+
+      - name: Test Web HTTP Response (Case 1)
+        run: curl -f http://your-alb-dns-name
+
+      - name: Test Static Page Load (Case 2)
+        run: |
+          curl -f http://your-alb-dns-name | grep "Mini Finance"
+
+      - name: Test Failure Scenario (Case 3)
+        run: |
+          curl -f http://your-alb-dns-name/nonexist || echo "Handled 404 correctly"

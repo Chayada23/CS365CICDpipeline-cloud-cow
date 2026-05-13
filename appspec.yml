@@ -1,0 +1,16 @@
+version: 0.0
+os: linux
+files:
+  - source: /          # เอาทุกไฟล์ใน repo
+    destination: /var/www/html  # ไปวางที่นี่
+
+hooks:
+  BeforeInstall:
+    - location: scripts/stop_nginx.sh
+      timeout: 300
+  AfterInstall:
+    - location: scripts/start_nginx.sh
+      timeout: 300
+  ValidateService:
+    - location: scripts/validate.sh
+      timeout: 300

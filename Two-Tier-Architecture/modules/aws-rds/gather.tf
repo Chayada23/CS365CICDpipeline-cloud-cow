@@ -1,0 +1,31 @@
+data "aws_vpc" "vpc" {
+  filter {
+    name   = "tag:Name"
+    values = [var.VPC-NAME]
+  }
+}
+
+data "aws_subnet" "private-subnet1" {
+  filter {
+    name   = "tag:Name"
+    values = [var.private-subnet-name1]
+  }
+}
+
+data "aws_subnet" "private-subnet2" {
+  filter {
+    name   = "tag:Name"
+    values = [var.private-subnet-name2]
+  }
+}
+
+data "aws_security_group" "db-sg" {
+  filter {
+    name   = "tag:Name"
+    values = [var.db-sg-name]
+  }
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.vpc.id]
+  }
+}
