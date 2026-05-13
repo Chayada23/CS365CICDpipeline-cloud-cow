@@ -47,18 +47,30 @@ jobs:
 
 
   e2e-test:
-    name: End-to-End Testing
-    needs: terraform
-    runs-on: ubuntu-latest
+  name: End-to-End Testing
+  needs: terraform
+  runs-on: ubuntu-latest
 
-    steps:
-      - name: Test Web HTTP Response (Case 1)
-        run: curl -f http://${{ needs.terraform.outputs.alb_dns }}
+  steps:
+    - name: Set ALB DNS
+      id: vars
+      run: echo "alb=${{ needs.terraform.outputs.alb_dns }}" >> $GITHUB_OUTPUT
 
-      - name: Test Static Page Load (Case 2)
-        run: |
-          curl -f http://${{ needs.terraform.outputs.alb_dns }} | grep "Mini Finance"
+    - name: Validate ALB DNS exists
+      run: |
+        if [ -z "${{ needs.terraform.outputs.alb_dns }}" ]; then
+          echo "ALB DNS is empty!"
+          exit 1
+        fi
 
-      - name: Test Failure Scenario (Case 3)
-        run: |
-          curl -f http://${{ needs.terraform.outputs.alb_dns }}/nonexist || echo "Handled 404 correctly"
+    - name: Test Web HTTP Response (Case 1)
+      run: |
+        curl -f http://${{ needs.terraform.outputs.alb_dns }}
+
+    - name: Test Static Page Load (Case 2)
+      run: |
+        curl -f http://${{ needs.terraform.outputs.alb_dns }} | grep -i "Mini Finance"
+
+    - name: Test Failure Scenario (Case 3)
+      run: |
+        curl -f http://${{ needs.terraform.outputs.alb_dns }}/nonexist || echo "Handled 404 correctly"
