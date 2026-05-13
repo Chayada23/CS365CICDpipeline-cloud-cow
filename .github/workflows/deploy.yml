@@ -43,7 +43,9 @@ jobs:
 
       - name: Get ALB DNS
         id: out
-        run: echo "alb_dns=$(terraform output -raw alb_dns)" >> $GITHUB_OUTPUT
+        run: |
+          ALB_DNS=$(terraform output -raw alb_dns)
+          echo "alb_dns=$ALB_DNS" >> $GITHUB_OUTPUT
 
   e2e-test:
     name: End-to-End Testing
