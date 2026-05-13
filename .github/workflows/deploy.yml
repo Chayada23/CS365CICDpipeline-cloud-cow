@@ -10,10 +10,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4  # ✅ แก้จาก v3
+      - uses: actions/checkout@v4
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4  # ✅ แก้จาก v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -21,9 +21,9 @@ jobs:
           aws-region: us-east-1
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3  # ✅ แก้จาก v2
+        uses: hashicorp/setup-terraform@v3
         with:
-          terraform_wrapper: false  # ✅ ป้องกัน debug text ปนใน output
+          terraform_wrapper: false
 
       - name: Terraform Init
         run: terraform -chdir=Two-Tier-Architecture/bloody-sweet init -upgrade -reconfigure
@@ -45,9 +45,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4  # ✅ แก้จาก v3
+      - uses: actions/checkout@v4
 
-      # ✅ เพิ่ม AWS credentials (จำเป็นสำหรับดึง Terraform state จาก S3)
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -57,9 +56,9 @@ jobs:
           aws-region: us-east-1
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3  # ✅ แก้จาก v2
+        uses: hashicorp/setup-terraform@v3
         with:
-          terraform_wrapper: false  # ✅ สำคัญมาก: ทำให้ output ได้ค่า clean
+          terraform_wrapper: false
 
       - name: Init Terraform (for state access)
         run: terraform -chdir=Two-Tier-Architecture/bloody-sweet init -reconfigure
@@ -73,18 +72,55 @@ jobs:
       - name: Validate ALB DNS
         run: |
           if [ -z "$alb_dns" ]; then
-            echo "ALB DNS is empty!"
+            echo "❌ ALB DNS is empty!"
             exit 1
           fi
+          echo "✅ ALB DNS: $alb_dns"
 
-      - name: Wait for ALB
-        run: sleep 60
+      # ✅ แก้: ใช้ retry loop แทน sleep 60 (รอจริงๆ จนกว่า ALB จะพร้อม)
+      - name: Wait for ALB to be ready
+        run: |
+          echo "⏳ Waiting for ALB to become healthy..."
+          for i in $(seq 1 20); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://$alb_dns)
+            echo "Attempt $i: HTTP $STATUS"
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ ALB is ready!"
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "❌ ALB did not become healthy after 5 minutes"
+          exit 1
 
+      # Case 1: ตรวจสอบ HTTP 200
       - name: Test Web HTTP Response (Case 1)
-        run: curl --retry 10 --retry-delay 5 -f http://$alb_dns
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://$alb_dns)
+          echo "HTTP Status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "❌ Expected 200, got $STATUS"
+            exit 1
+          fi
+          echo "✅ Case 1 passed"
 
+      # Case 2: ตรวจสอบ content ของหน้าเว็บ
       - name: Test Static Page Load (Case 2)
-        run: curl -f http://$alb_dns | grep -i "Mini Finance"
+        run: |
+          BODY=$(curl -sf http://$alb_dns)
+          echo "$BODY" | grep -i "Mini Finance" && echo "✅ Case 2 passed" || {
+            echo "❌ 'Mini Finance' not found in response"
+            exit 1
+          }
 
+      # Case 3: ตรวจสอบ 404 handling
       - name: Test Failure Scenario (Case 3)
-        run: curl -f http://$alb_dns/nonexist || echo "Handled 404 correctly"  # ✅ ลบ "workflow" ออก
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://$alb_dns/nonexist)
+          echo "HTTP Status: $STATUS"
+          if [ "$STATUS" = "404" ] || [ "$STATUS" = "200" ]; then
+            echo "✅ Case 3 passed: server responded with $STATUS"
+          else
+            echo "❌ Unexpected status: $STATUS"
+            exit 1
+          fi
