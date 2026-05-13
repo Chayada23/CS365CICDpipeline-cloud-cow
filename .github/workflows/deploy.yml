@@ -10,10 +10,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4  # ✅ แก้จาก v3
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4  # ✅ แก้จาก v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -21,7 +21,9 @@ jobs:
           aws-region: us-east-1
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
+        uses: hashicorp/setup-terraform@v3  # ✅ แก้จาก v2
+        with:
+          terraform_wrapper: false  # ✅ ป้องกัน debug text ปนใน output
 
       - name: Terraform Init
         run: terraform -chdir=Two-Tier-Architecture/bloody-sweet init -upgrade -reconfigure
@@ -29,12 +31,10 @@ jobs:
       - name: Terraform Validate
         run: terraform -chdir=Two-Tier-Architecture/bloody-sweet validate
 
-      # ⚠️ DESTROY FIXED (ต้องใส่ chdir)
       - name: Terraform Destroy
         run: terraform -chdir=Two-Tier-Architecture/bloody-sweet destroy -auto-approve -var-file="variables.tfvars"
         continue-on-error: true
 
-      # ⚠️ APPLY FIXED (ต้องใส่ chdir)
       - name: Terraform Apply
         run: terraform -chdir=Two-Tier-Architecture/bloody-sweet apply -auto-approve -var-file="variables.tfvars"
 
@@ -45,10 +45,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4  # ✅ แก้จาก v3
+
+      # ✅ เพิ่ม AWS credentials (จำเป็นสำหรับดึง Terraform state จาก S3)
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: us-east-1
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
+        uses: hashicorp/setup-terraform@v3  # ✅ แก้จาก v2
+        with:
+          terraform_wrapper: false  # ✅ สำคัญมาก: ทำให้ output ได้ค่า clean
 
       - name: Init Terraform (for state access)
         run: terraform -chdir=Two-Tier-Architecture/bloody-sweet init -reconfigure
@@ -76,4 +87,4 @@ jobs:
         run: curl -f http://$alb_dns | grep -i "Mini Finance"
 
       - name: Test Failure Scenario (Case 3)
-        run: curl -f http://$alb_dns/nonexist || echo "Handled 404 correctly"
+        run: curl -f http://$alb_dns/nonexist || echo "Handled 404 correctly"  # ✅ ลบ "workflow" ออก
