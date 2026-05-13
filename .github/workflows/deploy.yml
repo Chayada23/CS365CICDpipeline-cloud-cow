@@ -38,6 +38,10 @@ jobs:
       - name: Terraform Plan
         run: terraform -chdir=Two-Tier-Architecture/bloody-sweet plan -var-file="variables.tfvars"
 
+      - name: Terraform Destroy (reset infra)
+        run: terraform -chdir=Two-Tier-Architecture/bloody-sweet destroy -auto-approve -var-file="variables.tfvars"
+        continue-on-error: true
+
       - name: Terraform Apply
         run: terraform -chdir=Two-Tier-Architecture/bloody-sweet apply -auto-approve -var-file="variables.tfvars"
 
