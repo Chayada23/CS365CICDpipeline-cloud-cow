@@ -29,6 +29,10 @@ jobs:
       - name: Terraform Validate
         run: terraform -chdir=Two-Tier-Architecture/bloody-sweet validate
 
+        - name: Terraform Destroy
+        run: terraform destroy -auto-approve
+        continue-on-error: true
+
       - name: Terraform Apply
         run: terraform -chdir=Two-Tier-Architecture/bloody-sweet apply -auto-approve -var-file="variables.tfvars"
 
