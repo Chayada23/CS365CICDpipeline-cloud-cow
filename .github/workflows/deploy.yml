@@ -26,9 +26,6 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
 
-      - name: Clean Terraform
-        run: rm -rf .terraform .terraform.lock.hcl
-
       - name: Terraform Init
         run: terraform -chdir=Two-Tier-Architecture/bloody-sweet init -upgrade -reconfigure
 
@@ -38,18 +35,20 @@ jobs:
       - name: Terraform Plan
         run: terraform -chdir=Two-Tier-Architecture/bloody-sweet plan -var-file="variables.tfvars"
 
-      - name: Terraform Destroy (reset infra)
-        run: terraform -chdir=Two-Tier-Architecture/bloody-sweet destroy -auto-approve -var-file="variables.tfvars"
-        continue-on-error: true
+      # ❌ เอา destroy ออก (สำคัญมาก)
+      # - name: Terraform Destroy (REMOVE THIS)
+      #   run: terraform destroy ...
 
       - name: Terraform Apply
         run: terraform -chdir=Two-Tier-Architecture/bloody-sweet apply -auto-approve -var-file="variables.tfvars"
 
-      # ✅ FIX: export terraform output
+      # ✅ SAFE OUTPUT FIX
       - name: Get ALB DNS output
         id: get_output
         run: |
-          echo "alb_dns=$(terraform -chdir=Two-Tier-Architecture/bloody-sweet output -raw alb_dns)" >> $GITHUB_OUTPUT
+          ALB_DNS=$(terraform -chdir=Two-Tier-Architecture/bloody-sweet output -raw alb_dns | tr -d '\r')
+
+          echo "alb_dns=$ALB_DNS" >> $GITHUB_OUTPUT
 
 
   e2e-test:
@@ -69,7 +68,7 @@ jobs:
           fi
 
       - name: Wait for ALB to be ready
-        run: sleep 30
+        run: sleep 60
 
       - name: Test Web HTTP Response (Case 1)
         run: |
