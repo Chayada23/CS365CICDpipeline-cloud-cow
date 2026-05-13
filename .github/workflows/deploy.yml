@@ -29,10 +29,12 @@ jobs:
       - name: Terraform Validate
         run: terraform -chdir=Two-Tier-Architecture/bloody-sweet validate
 
+      # ⚠️ DESTROY FIXED (ต้องใส่ chdir)
       - name: Terraform Destroy
-        run: terraform destroy -auto-approve
+        run: terraform -chdir=Two-Tier-Architecture/bloody-sweet destroy -auto-approve -var-file="variables.tfvars"
         continue-on-error: true
 
+      # ⚠️ APPLY FIXED (ต้องใส่ chdir)
       - name: Terraform Apply
         run: terraform -chdir=Two-Tier-Architecture/bloody-sweet apply -auto-approve -var-file="variables.tfvars"
 
@@ -45,34 +47,33 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Setup Terraform (for output reading)
+      - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
 
-      - name: Get ALB DNS directly from Terraform state
-        id: alb
+      - name: Init Terraform (for state access)
+        run: terraform -chdir=Two-Tier-Architecture/bloody-sweet init -reconfigure
+
+      - name: Get ALB DNS
         run: |
           ALB_DNS=$(terraform -chdir=Two-Tier-Architecture/bloody-sweet output -raw alb_dns)
           echo "ALB=$ALB_DNS"
           echo "alb_dns=$ALB_DNS" >> $GITHUB_ENV
 
-      - name: Validate ALB DNS exists
+      - name: Validate ALB DNS
         run: |
           if [ -z "$alb_dns" ]; then
             echo "ALB DNS is empty!"
             exit 1
           fi
 
-      - name: Wait for ALB to be ready
+      - name: Wait for ALB
         run: sleep 60
 
       - name: Test Web HTTP Response (Case 1)
-        run: |
-          curl --retry 10 --retry-delay 5 -f http://$alb_dns
+        run: curl --retry 10 --retry-delay 5 -f http://$alb_dns
 
       - name: Test Static Page Load (Case 2)
-        run: |
-          curl -f http://$alb_dns | grep -i "Mini Finance"
+        run: curl -f http://$alb_dns | grep -i "Mini Finance"
 
       - name: Test Failure Scenario (Case 3)
-        run: |
-          curl -f http://$alb_dns/nonexist || echo "Handled 404 correctly"
+        run: curl -f http://$alb_dns/nonexist || echo "Handled 404 correctly"
