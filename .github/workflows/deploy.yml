@@ -9,6 +9,9 @@ jobs:
     name: Deploy Infrastructure
     runs-on: ubuntu-latest
 
+    outputs:
+      alb_dns: ${{ steps.out.outputs.alb_dns }}
+
     steps:
       - uses: actions/checkout@v3
 
@@ -17,7 +20,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}   
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: us-east-1
 
       - name: Setup Terraform
@@ -35,22 +38,23 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -auto-approve -var-file="variables.tfvars"
 
+      - name: Get ALB DNS
+        id: out
+        run: echo "alb_dns=$(terraform output -raw alb_dns)" >> $GITHUB_OUTPUT
+
   e2e-test:
     name: End-to-End Testing
     needs: terraform
     runs-on: ubuntu-latest
 
     steps:
-      - name: Wait for deployment
-        run: sleep 120
-
       - name: Test Web HTTP Response (Case 1)
-        run: curl -f http://your-alb-dns-name
+        run: curl -f http://${{ needs.terraform.outputs.alb_dns }}
 
       - name: Test Static Page Load (Case 2)
         run: |
-          curl -f http://your-alb-dns-name | grep "Mini Finance"
+          curl -f http://${{ needs.terraform.outputs.alb_dns }} | grep "Mini Finance"
 
       - name: Test Failure Scenario (Case 3)
         run: |
-          curl -f http://your-alb-dns-name/nonexist || echo "Handled 404 correctly"
+          curl -f http://${{ needs.terraform.outputs.alb_dns }}/nonexist || echo "Handled 404 correctly"
