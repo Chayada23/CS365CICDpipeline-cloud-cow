@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     outputs:
-      alb_dns: ${{ steps.out.outputs.alb_dns }}
+      alb_dns: ${{ steps.get_output.outputs.alb_dns }}
 
     steps:
       - uses: actions/checkout@v3
@@ -45,32 +45,40 @@ jobs:
       - name: Terraform Apply
         run: terraform -chdir=Two-Tier-Architecture/bloody-sweet apply -auto-approve -var-file="variables.tfvars"
 
+      # ✅ FIX: export terraform output
+      - name: Get ALB DNS output
+        id: get_output
+        run: |
+          echo "alb_dns=$(terraform -chdir=Two-Tier-Architecture/bloody-sweet output -raw alb_dns)" >> $GITHUB_OUTPUT
+
 
   e2e-test:
-  name: End-to-End Testing
-  needs: terraform
-  runs-on: ubuntu-latest
+    name: End-to-End Testing
+    needs: terraform
+    runs-on: ubuntu-latest
 
-  steps:
-    - name: Set ALB DNS
-      id: vars
-      run: echo "alb=${{ needs.terraform.outputs.alb_dns }}" >> $GITHUB_OUTPUT
+    steps:
+      - name: Debug ALB DNS
+        run: echo "ALB = ${{ needs.terraform.outputs.alb_dns }}"
 
-    - name: Validate ALB DNS exists
-      run: |
-        if [ -z "${{ needs.terraform.outputs.alb_dns }}" ]; then
-          echo "ALB DNS is empty!"
-          exit 1
-        fi
+      - name: Validate ALB DNS exists
+        run: |
+          if [ -z "${{ needs.terraform.outputs.alb_dns }}" ]; then
+            echo "ALB DNS is empty!"
+            exit 1
+          fi
 
-    - name: Test Web HTTP Response (Case 1)
-      run: |
-        curl -f http://${{ needs.terraform.outputs.alb_dns }}
+      - name: Wait for ALB to be ready
+        run: sleep 30
 
-    - name: Test Static Page Load (Case 2)
-      run: |
-        curl -f http://${{ needs.terraform.outputs.alb_dns }} | grep -i "Mini Finance"
+      - name: Test Web HTTP Response (Case 1)
+        run: |
+          curl --retry 10 --retry-delay 5 -f http://${{ needs.terraform.outputs.alb_dns }}
 
-    - name: Test Failure Scenario (Case 3)
-      run: |
-        curl -f http://${{ needs.terraform.outputs.alb_dns }}/nonexist || echo "Handled 404 correctly"
+      - name: Test Static Page Load (Case 2)
+        run: |
+          curl -f http://${{ needs.terraform.outputs.alb_dns }} | grep -i "Mini Finance"
+
+      - name: Test Failure Scenario (Case 3)
+        run: |
+          curl -f http://${{ needs.terraform.outputs.alb_dns }}/nonexist || echo "Handled 404 correctly"
