@@ -91,7 +91,7 @@ module "autoscaling" {
 }
 
 output "alb_dns" {
-  value = aws_lb.main.dns_name
+  value = module.alb.alb_dns
 }
 
 # module "route53" {

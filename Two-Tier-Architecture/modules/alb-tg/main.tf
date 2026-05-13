@@ -57,3 +57,6 @@ resource "aws_lb_listener" "web-alb-listener" {
 output "target_group_arn" {
   value = aws_lb_target_group.web-tg.arn
 }
+output "alb_dns" {
+  value = aws_lb.web-elb.dns_name
+}
