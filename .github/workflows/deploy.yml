@@ -30,16 +30,16 @@ jobs:
         run: rm -rf .terraform .terraform.lock.hcl
 
       - name: Terraform Init
-        run: terraform init -upgrade -reconfigure
+        run: terraform -chdir=Two-Tier-Architecture/bloody-sweet init -upgrade -reconfigure
 
       - name: Terraform Validate
-        run: terraform validate
+        run: terraform -chdir=Two-Tier-Architecture/bloody-sweet validate
 
       - name: Terraform Plan
-        run: terraform plan -var-file="variables.tfvars"
+        run: terraform -chdir=Two-Tier-Architecture/bloody-sweet plan -var-file="variables.tfvars"
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve -var-file="variables.tfvars"
+        run: terraform -chdir=Two-Tier-Architecture/bloody-sweet apply -auto-approve -var-file="variables.tfvars"
 
       - name: Get ALB DNS
         id: out
