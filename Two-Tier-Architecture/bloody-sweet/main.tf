@@ -90,10 +90,6 @@ module "autoscaling" {
   depends_on = [module.alb]
 }
 
-output "alb_dns" {
-  value = module.alb.alb_dns
-}
-
 # module "route53" {
 #   source = "../modules/aws-waf-cdn-acm-route53"
 #
