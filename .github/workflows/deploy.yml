@@ -45,11 +45,6 @@ jobs:
       - name: Terraform Apply
         run: terraform -chdir=Two-Tier-Architecture/bloody-sweet apply -auto-approve -var-file="variables.tfvars"
 
-      - name: Get ALB DNS
-        id: out
-        run: |
-          ALB_DNS=$(terraform output -raw alb_dns)
-          echo "alb_dns=$ALB_DNS" >> $GITHUB_OUTPUT
 
   e2e-test:
     name: End-to-End Testing
