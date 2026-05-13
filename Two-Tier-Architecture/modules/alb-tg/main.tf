@@ -12,33 +12,35 @@ resource "aws_lb" "web-elb" {
   }
 }
 
-# Creating Target Group for Web-Tier 
 resource "aws_lb_target_group" "web-tg" {
-  name = var.tg-name
+
+  name_prefix = "wtg-"
+
   health_check {
-    enabled = true
-    interval            = 10
-    path                = "/"
-    protocol            = "HTTP"
-    timeout             = 5
-    healthy_threshold   = 5
+    enabled            = true
+    interval           = 10
+    path               = "/"
+    protocol           = "HTTP"
+    timeout            = 5
+    healthy_threshold  = 5
     unhealthy_threshold = 2
   }
+
   target_type = "instance"
-  port     = 80
-  protocol = "HTTP"
-  vpc_id   = data.aws_vpc.vpc.id
+  port         = 80
+  protocol     = "HTTP"
+  vpc_id       = data.aws_vpc.vpc.id
 
   tags = {
     Name = var.tg-name
   }
 
   lifecycle {
-    prevent_destroy = false
-  } 
-  depends_on = [ aws_lb.web-elb ]
-}
+    create_before_destroy = true
+  }
 
+  depends_on = [aws_lb.web-elb]
+}
 
 # Creating ALB listener with port 80 and attaching it to Web-Tier Target Group
 resource "aws_lb_listener" "web-alb-listener" {
