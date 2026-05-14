@@ -72,10 +72,10 @@ jobs:
       - name: Validate ALB DNS
         run: |
           if [ -z "$alb_dns" ]; then
-            echo "❌ ALB DNS is empty!"
+            echo "ALB DNS is empty!"
             exit 1
           fi
-          echo "✅ ALB DNS: $alb_dns"
+          echo "ALB DNS: $alb_dns"
 
       # ใช้ retry loop แทน sleep 60 (รอจริงๆ จนกว่า ALB จะพร้อม)
       - name: Wait for ALB to be ready
